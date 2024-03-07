@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Book Recommendation System</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+  </head>
+  <body>
+
+    <div id="loader">
+      <p class="loading">
+        Loading ....
+      </p>
+    </div>
+
+    <div class="bg-primary">
+      <div class="container py-1 pt-2">
+        <p class="text-center text-light text-center">Recommendation System</p>
+      </div>
+    </div>
+
+    <div class="container p-2">
+      <div class="d-flex justify-content-end">
+        <a type="button" class="btn btn-dark" href="#colab"
+          >Collabrative Recommendation</a
+        >
+      </div>
+
+      <div class="container mt-4" id="top10"></div>
+
+      <hr />
+
+      <div class="container mt-4" id="colab">
+        <p class="display-3">
+          Item - Item based Collaborative Filtering Recommendations:
+        </p>
+        <div class="d-flex mt-2 mb-5">
+          <input
+            class="form-control mr-sm-2 me-2"
+            type="search"
+            placeholder="Enter Book Title"
+            aria-label="Search"
+            id="book_title"
+          />
+          <button
+            class="btn btn-outline-success my-2 my-sm-0"
+            type="button"
+            onclick="onItemClick()"
+          >
+            Search
+          </button>
+        </div>
+
+        <div id="item-item-based"></div>
+
+        <p class="display-3">
+          User - User based Collaborative Filtering Recommendations:
+        </p>
+        <div class="d-flex mt-2 mb-5">
+          <input
+            class="form-control mr-sm-2 me-2"
+            type="search"
+            placeholder="Enter User ID"
+            aria-label="Search"
+            id="user_id"
+          />
+          <button class="btn btn-outline-success my-2 my-sm-0" type="button" onclick="onUserClick()">
+            Search
+          </button>
+        </div>
+        <div id="user-user-based"></div>
+
+        <p class="display-3">
+          Matrix Factorization Collaborative Filtering Recommendations:
+        </p>
+        <div class="d-flex mt-2 mb-5">
+          <input
+            class="form-control mr-sm-2 me-2"
+            type="search"
+            placeholder="Enter User ID"
+            aria-label="Search"
+          />
+          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
+            Search
+          </button>
+        </div>
+
+        <div id="matrix-based"></div>
+      </div>
+    </div>
+
+    <footer class="footer bg-dark text-white py-4">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-12 text-center">
+            <p>Recommendation Course Project 2 : Team 9</p>
+            <p class="lead">
+              Guided by <span class="fw-bold"> Dr. Arpit Rana</span>
+            </p>
+            <p class="lead">TA : Himanshu Beniwal, Arjun Vakani</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <div id="app"></div>
+    <script type="module" src="/main.js"></script>
+    <script>
+      hideLoader()
+      let initialData = [];
+
+      function showLoader(){
+        const loader = document.getElementById('loader');
+        loader.style.display = "flex"
+      }
+
+      function hideLoader(){
+        const loader = document.getElementById('loader');
+        loader.style.display = "none"
+      }
+
+
+      let url = 'http://127.0.0.1:8000/recommendations/'
+      const setData = (data) => {
+        initialData = data;
+      };
+
+      async function fetchItem(book_title) {     
+        try {
+          const requestData = {
+            book_title:book_title,
+            top_n: 5
+          }
+          const response = await fetch(url+"item/",{
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+          if (!response.ok) {
+            throw new Error("Failed to fetch data");
+          }
+          const data = await response.json();
+          console.log(data);
+
+          return data;
+        } catch (error) {
+          console.error("Error fetching top 10 books:", error);
+          return null;
+        }
+      }
+
+      async function fetchUser(user_id) {     
+        try {
+          const requestData = {
+            user_id:user_id,
+            top_n: 5
+          }
+          const response = await fetch(url+"user/",{
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+          if (!response.ok) {
+            throw new Error("Failed to fetch data");
+          }
+          const data = await response.json();
+          console.log(data);
+
+          return data;
+        } catch (error) {
+          console.error("Error fetching top 10 books:", error);
+          return null;
+        }
+      }
+
+
+
+
+      async function fetchTop10Books() {
+        try {
+          const response = await fetch("/top10Data.json");
+          if (!response.ok) {
+            throw new Error("Failed to fetch data");
+          }
+          const data = await response.json();
+          const top10Books = {};
+
+          data.forEach((book) => {
+            top10Books[book.id] = {
+              title: book.title,
+              rating: book.rating,
+              link: book.link,
+            };
+          });
+
+          return top10Books;
+        } catch (error) {
+          console.error("Error fetching top 10 books:", error);
+          return null;
+        }
+      }
+
+      const DisplayData = (data) => {
+        const top10Element = document.getElementById("top10");
+
+        let str = "";
+        const dataArray = Object.values(data);
+
+        str = `<p class=" h2">
+        <em class="bi bi-book"></em>
+            Top 10 Popular Books
+          </p>
+          <hr>`;
+
+        str += `<div class="row row-cols-3 g-4">`;
+        console.log(dataArray);
+        dataArray.forEach((d) => {
+          str += `
+                <div class="col">
+              <div class="card card-color">
+              <div class="head-wrapper">
+                <h4 class="p-3">${d.title}</h4>
+              </div>
+                <hr>
+                <div class="image-wrapper">
+                  <img src="${d.link}" class="mx-auto" alt="${d.title}" width="200px">
+                </div>
+                <hr>
+                  <p class="lead fw-semibold text-left px-4 yellow-star">
+                  <span class=" text-dark">${d.rating}</span> <em class="bi bi-star-fill"></em>
+                </p>
+              </div>
+            </div>`;
+        });
+        str += `</div>`;
+
+        top10Element.innerHTML = str;
+      };
+
+
+      const DisplayItemData = (data) => {
+        const itemItemBased = document.getElementById("item-item-based");
+
+        console.log(data);
+
+        let str = "";
+        
+
+        str += `<div class="row row-cols-3 g-4 p-4">`;
+        data.forEach((d) => {
+          str += `
+                <div class="col">
+              <div class="card card-color">
+              <div class="head-wrapper">
+                <h4 class="p-3">${d['Book-Title']}</h4>
+              </div>
+                <hr>
+                <div class="image-wrapper">
+                  <img src="${d['Image-URL-L']}" class="mx-auto" alt="${d.title}" width="200px">
+                </div>
+                <hr>
+                  <p class="lead fw-semibold text-left px-4 yellow-star">
+                  <span class=" text-dark">${d['Year-Of-Publication']}</span>
+                </p>
+              </div>
+            </div>`;
+        });
+        str += `</div>`;
+
+        itemItemBased.innerHTML = str;
+      };
+
+
+      const DisplayUserData = (data) => {
+        const itemItemBased = document.getElementById("user-user-based");
+
+        console.log(data);
+
+        let str = "";
+        
+
+        str += `<div class="row row-cols-3 g-4 p-4">`;
+        data.forEach((d) => {
+          str += `
+                <div class="col">
+              <div class="card card-color">
+              <div class="head-wrapper">
+                <h4 class="p-3">${d['Book-Title']}</h4>
+              </div>
+                <hr>
+                <div class="image-wrapper">
+                  <img src="${d['Image-URL-L']}" class="mx-auto" alt="${d.title}" width="200px">
+                </div>
+                <hr>
+                  <p class="lead fw-semibold text-left px-4 yellow-star">
+                  <span class=" text-dark">${d['Year-Of-Publication']}</span>
+                </p>
+              </div>
+            </div>`;
+        });
+        str += `</div>`;
+
+        itemItemBased.innerHTML = str;
+      };
+
+
+
+
+      fetchTop10Books().then((top10Books) => {
+        console.log(top10Books);
+        console.log(typeof top10Books);
+        DisplayData(top10Books);
+      });
+
+      const onItemClick = () => {
+
+        showLoader()
+        let book_title = document.getElementById("book_title").value;
+        document.getElementById("book_title").value='';
+        console.log(book_title);
+        fetchItem(book_title).then((itemDetails) => {
+          DisplayItemData(itemDetails)
+          hideLoader()
+        })
+          .catch((err) => {
+            hideLoader()
+            console.log(err);
+          
+          })
+      };
+
+
+      const onUserClick = () => {
+
+        showLoader()
+        let user_id = document.getElementById("user_id").value;
+        document.getElementById("user_id").value='';
+        console.log(user_id);
+        fetchUser(user_id).then((itemDetails) => {
+          DisplayUserData(itemDetails)
+          hideLoader()
+        })
+          .catch((err) => {
+            hideLoader()
+            console.log(err);
+          
+          })
+      };
+
+      
+    </script>
+  </body>
+</html>
+
+
+{
+  "ISBN": "0679442405",
+  "Book-Title": "Traveling Mercies: Some Thoughts on Faith",
+  "Book-Author": "Anne Lamott",
+  "Year-Of-Publication": 1999,
+  "Publisher": "Random House Inc",
+  "Image-URL-S": "http://images.amazon.com/images/P/0679442405.01.THUMBZZZ.jpg",
+  "Image-URL-M": "http://images.amazon.com/images/P/0679442405.01.MZZZZZZZ.jpg",
+  "Image-URL-L": "http://images.amazon.com/images/P/0679442405.01.LZZZZZZZ.jpg"
+}
